@@ -1,0 +1,50 @@
+---
+- name: Configuración Cisco 7200 - Solución Final
+  hosts: cisco_7200
+  gather_facts: no
+
+  vars:
+    hostname: "FCER"
+    domain_name: "fcer.local"
+    ntp_servers: ["0.pool.ntp.org", "1.pool.ntp.org"]
+    vlans:
+      - { id: 10, description: "VLAN10" }
+      - { id: 20, description: "VLAN20" }
+      - { id: 30, description: "VLAN30" }
+      - { id: 100, description: "Apagados" }
+
+  tasks:
+    - name: Configuración básica
+      ansible.netcommon.cli_command:
+        command: |
+          configure terminal
+          hostname {{ hostname }}
+          ip domain-name {{ domain_name }}
+          {% for server in ntp_servers %}
+          ntp server {{ server }}
+          {% endfor %}
+          end
+          write memory
+
+    - name: Configurar interfaz DHCP
+      ansible.netcommon.cli_command:
+        command: |
+          configure terminal
+          interface FastEthernet1/1
+          ip address dhcp
+          no shutdown
+          end
+          write memory
+
+    - name: Configurar VLANs
+      ansible.netcommon.cli_command:
+        command: |
+          configure terminal
+          {% for vlan in vlans %}
+          interface FastEthernet0/0.{{ vlan.id }}
+          description {{ vlan.description }}
+          encapsulation dot1Q {{ vlan.id }}
+          {% endfor %}
+          end
+          write memory
+
